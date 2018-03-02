@@ -12,6 +12,9 @@
     "openAPI",
     "validator"
   ],
+  "files": [
+    "src"
+  ],
   "author": "Spikef",
   "license": "MIT",
   "devDependencies": {

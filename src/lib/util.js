@@ -5,7 +5,7 @@ exports.hasProp = function hasProp(obj, key) {
 };
 
 exports.getName = function getName(name) {
-    return `is${name[0].toUpperCase()}${name.slice(1)}`;
+    return `is${name[0].toUpperCase()}${name.slice(1).replace(/-([a-z])/, ($0, $1) => $1.toUpperCase())}`;
 };
 
 exports.hashKey = function hashKey(method, path) {

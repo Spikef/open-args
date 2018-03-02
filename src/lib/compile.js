@@ -126,6 +126,36 @@ class Compile {
         return result;
     }
 
+    /**
+     * define codes
+     * @param {Array} codes
+     * @param {Number} codes.indent
+     * @param {Object} param
+     * @param {String} param.name
+     * @param {String} param.type
+     * @param {String} [param.format]
+     * @param {Boolean} [param.required]
+     * @param {String} [param.pattern]
+     * @param {Number} [param.minLength]
+     * @param {Number} [param.maxLength]
+     * @param {Number} [param.multipleOf]
+     * @param {Number} [param.maximum]
+     * @param {Number} [param.minimum]
+     * @param {Boolean} [param.exclusiveMaximum]
+     * @param {Boolean} [param.exclusiveMinimum]
+     * @param {Object} [param.schema]
+     * @param {String} [param.$ref]
+     * @param {Array} [param.allOf]
+     * @param {Object} [param.items]
+     * @param {Number} [param.minItems]
+     * @param {Boolean} [param.uniqueItems]
+     * @param {Number} [param.maxItems]
+     * @param {Object} [param.properties]
+     * @param {Number} [param.minProperties]
+     * @param {Number} [param.maxProperties]
+     * @param {Array} [param.enum]
+     * @param {String} [parent]
+     */
     define(codes, param, parent = '') {
         var name = parent ? `${parent}['${param.name}']` : param.name;
         if (!util.isObject(param)) {
@@ -133,73 +163,57 @@ class Compile {
             return null;
         }
 
+        // schema
+        if (param.schema) {
+            param = Object.assign(param, param.schema);
+            delete param.schema;
+        }
+
         // $ref
         if (param.$ref) {
             if (param.$ref.nested) return;
-
             let $ref = this.getRef(param.$ref);
             if (!$ref) throw new Error(`Unknown $ref: ${param.$ref}`);
 
-            param = $ref;
+            param = Object.assign(param, $ref);
+            delete param.$ref;
         }
 
-        // schema
-        if (param.schema) {
-            // schema.$ref
-            if (param.schema.$ref) {
-                if (param.schema.$ref.nested) return;
+        // allOf
+        if (param.allOf) {
+            let schema = {
+                required: [],
+                properties: {}
+            };
 
-                let $ref = this.getRef(param.schema.$ref);
-                if (!$ref) throw new Error(`Unknown $ref: ${param.schema.$ref}`);
+            param.allOf.forEach(item => {
+                if (item.$ref) {
+                    if (item.$ref.nested) return;
+                    let $ref = this.getRef(item.$ref);
+                    if (!$ref) throw new Error(`Unknown $ref: ${item.$ref}`);
 
-                param.schema = $ref;
-            }
+                    item = $ref;
+                }
 
-            // param.schema.allOf
-            if (param.schema.allOf && util.isArray(param.schema.allOf)) {
-                let schema = {
-                    required: [],
-                    properties: {}
-                };
-
-                param.schema.allOf.forEach(item => {
-                    if (item.$ref) {
-                        if (item.$ref.nested) return;
-
-                        let $ref = this.getRef(item.$ref);
-                        if (!$ref) throw new Error(`Unknown $ref: ${item.$ref}`);
-
-                        item = $ref;
+                for (let i in item) {
+                    if (!item.hasOwnProperty(i)) continue;
+                    switch (i) {
+                        case 'required':
+                            schema.required = schema.required.concat(item[i]);
+                            break;
+                        case 'properties':
+                            Object.assign(schema.properties, item[i]);
+                            break;
+                        default:
+                            schema[i] = item[i];
                     }
+                }
+            });
 
-                    for (let i in item) {
-                        if (!item.hasOwnProperty(i)) continue;
-                        switch (i) {
-                            case 'required':
-                                schema.required = schema.required.concat(item[i]);
-                                break;
-                            case 'properties':
-                                Object.assign(schema.properties, item[i]);
-                                break;
-                            default:
-                                schema[i] = item[i];
-                        }
-                    }
-                });
+            if (!schema.required.length) delete schema.required;
 
-                param.schema = schema;
-                debug(param)
-            }
-
-            // items and properties
-            if (param.schema.items) {
-                param.items = param.schema.items;
-            } else if (param.schema.properties) {
-                param.required = param.schema.required || param.required;
-                param.properties = param.schema.properties;
-            }
-
-            delete param.schema;
+            param = Object.assign(param, schema);
+            delete param.allOf;
         }
 
         // fill type
@@ -230,7 +244,15 @@ class Compile {
 
         // type
         if (param.type === 'object') {
-            // TODO: type
+            // check type
+            if (parent) {
+                codes.push(`if (${parent}.hasOwnProperty('${param.name}')) {`);
+                codes.push(`${TAB}if (!type.isObject(${name})) return ${makeError(name, errorTypes.INVALID_TYPE, 'object')};`);
+                codes.push(`}`);
+            } else {
+                codes.push(`if (!type.isObject(${name})) return ${makeError(name, errorTypes.INVALID_TYPE, 'object')};`);
+            }
+
             // minProperties, maxProperties
             if (param.hasOwnProperty('minProperties')) {
                 codes.push(`if (!rule.isMinProps(${name}, ${param.minProperties})) return ${makeError(name, errorTypes.INVALID_PROPS_COUNT, param.minProperties, 'greater')};`);
@@ -283,9 +305,7 @@ class Compile {
 
             if (!param.required) {
                 codes.push(`if (!${parent}.hasOwnProperty('${param.name}')) {`);
-                codes.push(++codes.indent);
-                codes.push(`${name} = ${JSON.stringify(param.default)};`);
-                codes.push(--codes.indent);
+                codes.push(`${TAB}${name} = ${JSON.stringify(param.default)};`);
                 codes.push(`} else {`);
                 codes.push(++codes.indent);
             }
@@ -358,10 +378,10 @@ class Compile {
                 let checker = util.getName(param.format);
                 if (checker) {
                     if (/^isDate/.test(checker)) {
-                        codes.push(`${name} = rule.${checker}(${name});`);
+                        codes.push(`${name} = format.${checker}(${name});`);
                         codes.push(`if (${name} === null) return ${makeError(name, errorTypes.INVALID_FORMAT, param.format)};`);
                     } else {
-                        codes.push(`if (!rule.${checker}(${name})) return ${makeError(name, errorTypes.INVALID_FORMAT, param.format)};`);
+                        codes.push(`if (!format.${checker}(${name})) return ${makeError(name, errorTypes.INVALID_FORMAT, param.format)};`);
                     }
                 } else {
                     throw new Error(`Unknown format: ${param.format}`);

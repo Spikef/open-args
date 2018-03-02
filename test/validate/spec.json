@@ -35,7 +35,8 @@
                     "maximum": 200,
                     "minimum": 0,
                     "exclusiveMinimum": true,
-                    "exclusiveMaximum": true
+                    "exclusiveMaximum": true,
+                    "default": 10
                 },
                 "DOB": {
                     "type": "string",
@@ -62,6 +63,11 @@
                             "minLength": 2,
                             "maxLength": 50,
                             "pattern": "^[a-zA-Z0-9- ]+$"
+                        },
+                        "LastTime": {
+                            "type": "string",
+                            "format": "date-time",
+                            "required": true
                         },
                         "Address": {
                             "$ref": "#/definitions/address"
@@ -373,7 +379,7 @@
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/Pet"
+                                    "$ref": "#/definitions/pet"
                                 },
                                 {
                                     "type": "object",
