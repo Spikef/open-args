@@ -28,7 +28,8 @@ var req = {
                 ZipCode: 10001
             }
         },
-        huntingSkill: 'adventurous'
+        Tags: ['Dog'],
+        huntingSkill: 'adventurous',
     },
     params: {
         PetName: 'Dog'

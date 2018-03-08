@@ -146,7 +146,7 @@ class Compile {
      * @param {Object} [param.schema]
      * @param {String} [param.$ref]
      * @param {Array} [param.allOf]
-     * @param {Object} [param.items]
+     * @param {Object|*} [param.items]
      * @param {Number} [param.minItems]
      * @param {Boolean} [param.uniqueItems]
      * @param {Number} [param.maxItems]
@@ -219,6 +219,11 @@ class Compile {
         // fill type
         if (param.items) {
             param.type = 'array';
+            param.items.name = 'item';
+            param.items.required = false;
+            if (param.hasOwnProperty('minItems')) {
+                param.required = true;
+            }
         } else if (param.properties) {
             param.type = 'object';
             var required = Array.isArray(param.required) ? param.required : [];
@@ -268,8 +273,11 @@ class Compile {
             }
         } else if (param.type === 'array') {
             // TODO: collectionFormat
-            // TODO: type
-            // TODO: items
+
+            // check type
+            codes.push(`if (${parent}.hasOwnProperty('${param.name}')) {`);
+            codes.push(`${TAB}if (!type.isArray(${name})) return ${makeError(name, errorTypes.INVALID_TYPE, 'array')};`);
+            codes.push(`}`);
 
             // minItems, maxItems
             if (param.hasOwnProperty('minItems')) {
@@ -282,6 +290,18 @@ class Compile {
             if (param.hasOwnProperty('uniqueItems')) {
                 codes.push(`if (!rule.isUniqueItems(${name})) return ${makeError(name, errorTypes.NOT_UNIQUE_ITEMS)};`);
             }
+
+            // TODO: items.name
+            codes.push(`if (${parent}.hasOwnProperty('${param.name}')) {`);
+            codes.push(++codes.indent);
+            codes.push(`for (let i = 0; i < ${name}.length; i++) {`);
+            codes.push(++codes.indent);
+            codes.push(`let item = ${name}[i];`);
+            this.define(codes, param.items);
+            codes.push(--codes.indent);
+            codes.push(`}`);
+            codes.push(--codes.indent);
+            codes.push(`}`);
         } else if (param.type === 'file') {
             // codes.push(`if (!type.isFile(${name})) return false;`);
         } else {
@@ -303,7 +323,7 @@ class Compile {
                 }
             }
 
-            if (!param.required) {
+            if (!param.required && parent) {
                 codes.push(`if (!${parent}.hasOwnProperty('${param.name}')) {`);
                 codes.push(`${TAB}${name} = ${JSON.stringify(param.default)};`);
                 codes.push(`} else {`);
@@ -388,7 +408,7 @@ class Compile {
                 }
             }
 
-            if (!param.required) {
+            if (!param.required && parent) {
                 codes.push(--codes.indent);
                 codes.push(`}`);
             }
@@ -418,9 +438,10 @@ class Compile {
             }
         });
 
-        var fn = new Function(`return function ${name}(data, type, rule, format){\n${_codes.join('\n')}\n}`)();
-        debug(fn.toString());
-        return fn;
+        var fn = `function ${name}(data, type, rule, format){\n${_codes.join('\n')}\n}`;
+        console.log(fn);
+        console.log('===========')
+        return new Function(`return ${fn}`)();
     }
 }
 
