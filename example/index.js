@@ -1,5 +1,8 @@
-var petstore = require('./petstore');
-var Compile = require('../src');
+var spec = require('./spec');
+var Rav = require('../src');
 
-var compile = new Compile(petstore);
-console.log(compile.validations);
+var rav = new Rav(spec);
+Object.keys(rav.validations).forEach(key => {
+    console.log(`${key}:`);
+    console.log(rav.validations[key].toString());
+});

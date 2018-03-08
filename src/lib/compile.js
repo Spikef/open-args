@@ -439,8 +439,7 @@ class Compile {
         });
 
         var fn = `function ${name}(data, type, rule, format){\n${_codes.join('\n')}\n}`;
-        console.log(fn);
-        console.log('===========')
+        debug(`${fn}\n\n`);
         return new Function(`return ${fn}`)();
     }
 }
