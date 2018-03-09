@@ -9,8 +9,8 @@ var req = {
         Authorization: "token 123"
     },
     body: {
-        Name: 'Dog',
-        Type: 'cat',
+        Name: 'Peter',
+        Type: 'dog',
         Age: 5,
         Address: {
             Street: 'HundredFlowersStreet',

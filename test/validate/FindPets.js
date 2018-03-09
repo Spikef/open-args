@@ -5,48 +5,9 @@ var method = 'get';
 var path = '/pet';
 var spec = require('./spec');
 var req = {
-    header: {
-        Authorization: "token 123"
-    },
-    body: {
-        Name: 'Dog',
-        Type: 'cat',
-        Age: 5,
-        Address: {
-            Street: 'HundredFlowersStreet',
-            City: 'OneNightRiver',
-            State: 'LS',
-            ZipCode: 10001
-        },
-        Vet: {
-            Name: 'Dr Green',
-            LastTime: Date(),
-            Address: {
-                Street: 'HundredFlowersStreet',
-                City: 'OneNightRiver',
-                State: 'LS',
-                ZipCode: 10001
-            }
-        },
-        Tags: ['Dog'],
-        huntingSkill: 'adventurous',
-        familyAddress: [
-            {
-                Street: 'HundredFlowersStreet',
-                City: 'OneNightRiver',
-                State: 'LS',
-                ZipCode: 10001
-            },
-            {
-                Street: 'HundredFlowersStreet',
-                City: 'OneNightRiver',
-                State: 'LS',
-                ZipCode: 10001
-            }
-        ],
-    },
-    params: {
-        PetName: 'Dog'
+    query: {
+        Tags: 'dog,animal',
+        'Vet.Address.City': 'OneNightRiver'
     }
 };
 

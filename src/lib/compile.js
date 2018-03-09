@@ -146,6 +146,7 @@ class Compile {
      * @param {Number} [param.minimum]
      * @param {Boolean} [param.exclusiveMaximum]
      * @param {Boolean} [param.exclusiveMinimum]
+     * @param {String} [param.collectionFormat]
      * @param {Object} [param.schema]
      * @param {String} [param.$ref]
      * @param {Array} [param.allOf]
@@ -243,72 +244,77 @@ class Compile {
         // indent
         codes.push(codes.indent);
 
-        // required
-        if (param.required && !isItem) {
-            if (parent) {
-                codes.push(`if (!${parent}.hasOwnProperty('${param.name}')) return ${makeError(name, errorTypes.REQUIRED)};`);
-            } else {
-                codes.push(`if (!${param.name}) return ${makeError(name, errorTypes.REQUIRED)};`);
-            }
-        }
-
-        // type
-        if (param.type === 'object') {
-            // check type
-            if (parent && !isItem) {
-                codes.push(`if (${parent}.hasOwnProperty('${param.name}')) {`);
-                codes.push(`${TAB}if (!type.isObject(${name})) return ${makeError(name, errorTypes.INVALID_TYPE, 'object')};`);
-                codes.push(`}`);
-            } else {
-                codes.push(`if (!type.isObject(${name})) return ${makeError(name, errorTypes.INVALID_TYPE, 'object')};`);
-            }
-
-            // minProperties, maxProperties
-            if (param.hasOwnProperty('minProperties')) {
-                codes.push(`if (!rule.isMinProps(${name}, ${param.minProperties})) return ${makeError(name, errorTypes.INVALID_PROPS_COUNT, param.minProperties, 'greater')};`);
-            }
-            if (param.hasOwnProperty('maxProperties')) {
-                codes.push(`if (!rule.isMaxProps(${name}, ${param.minProperties})) return ${makeError(name, errorTypes.INVALID_PROPS_COUNT, param.maxProperties, 'less')};`);
-            }
-
-            for (let i in param.properties) {
-                if (!param.properties.hasOwnProperty(i)) continue;
-                let prop = param.properties[i];
-                this.define(codes, prop, name);
-            }
-        } else if (param.type === 'array') {
-            // TODO: collectionFormat
-
-            // check type
-            codes.push(`if (${parent}.hasOwnProperty('${param.name}')) {`);
-            codes.push(`${TAB}if (!type.isArray(${name})) return ${makeError(name, errorTypes.INVALID_TYPE, 'array')};`);
-            codes.push(`}`);
-
-            // minItems, maxItems
-            if (param.hasOwnProperty('minItems')) {
-                codes.push(`if (!rule.isMinItems(${name}, ${param.minItems})) return ${makeError(name, errorTypes.INVALID_ITEMS_COUNT, param.minItems, 'greater')};`);
-            }
-            if (param.hasOwnProperty('maxItems')) {
-                codes.push(`if (!rule.isMaxItems(${name}, ${param.maxItems})) return ${makeError(name, errorTypes.INVALID_ITEMS_COUNT, param.maxItems, 'less')};`);
-            }
-            // uniqueItems
-            if (param.hasOwnProperty('uniqueItems')) {
-                codes.push(`if (!rule.isUniqueItems(${name})) return ${makeError(name, errorTypes.NOT_UNIQUE_ITEMS)};`);
-            }
-
-            let i = param.items.name;
-            codes.push(`if (${parent}.hasOwnProperty('${param.name}')) {`);
-            codes.push(++codes.indent);
-            codes.push(`for (let ${i} = 0; ${i} < ${name}.length; ${i}++) {`);
-            codes.push(++codes.indent);
-            this.define(codes, param.items, name, true);
-            codes.push(--codes.indent);
-            codes.push(`}`);
-            codes.push(--codes.indent);
-            codes.push(`}`);
-        } else if (param.type === 'file') {
+        if (param.type === 'file') {
             // No checking for file
-        } else {
+        } else if (param.type === 'object' || param.type === 'array') {
+            // start required
+            if (!isItem) {
+                if (param.required) {
+                    if (parent) {
+                        codes.push(`if (!${parent}.hasOwnProperty('${param.name}')) {`);
+                    } else {
+                        codes.push(`if (!${param.name}) {`);
+                    }
+                    codes.push(`${TAB}return ${makeError(name, errorTypes.REQUIRED)};`);
+                    codes.push(`} else {`);
+                } else {
+                    codes.push(`if (${parent}.hasOwnProperty('${param.name}')) {`);
+                }
+                codes.push(++codes.indent);
+            }
+
+            if (param.type === 'object') {
+                // check type
+                codes.push(`if (!type.isObject(${name})) return ${makeError(name, errorTypes.INVALID_TYPE, 'object')};`);
+
+                // minProperties, maxProperties
+                if (param.hasOwnProperty('minProperties')) {
+                    codes.push(`if (!rule.isMinProps(${name}, ${param.minProperties})) return ${makeError(name, errorTypes.INVALID_PROPS_COUNT, param.minProperties, 'greater')};`);
+                }
+                if (param.hasOwnProperty('maxProperties')) {
+                    codes.push(`if (!rule.isMaxProps(${name}, ${param.minProperties})) return ${makeError(name, errorTypes.INVALID_PROPS_COUNT, param.maxProperties, 'less')};`);
+                }
+
+                for (let i in param.properties) {
+                    if (!param.properties.hasOwnProperty(i)) continue;
+                    let prop = param.properties[i];
+                    this.define(codes, prop, name);
+                }
+            } else {
+                // collectionFormat
+                if (param.collectionFormat) {
+                    codes.push(`${name} = collect(${name}, ${JSON.stringify(param.collectionFormat)});`);
+                }
+
+                // check type
+                codes.push(`if (!type.isArray(${name})) return ${makeError(name, errorTypes.INVALID_TYPE, 'array')};`);
+
+                // minItems, maxItems
+                if (param.hasOwnProperty('minItems')) {
+                    codes.push(`if (!rule.isMinItems(${name}, ${param.minItems})) return ${makeError(name, errorTypes.INVALID_ITEMS_COUNT, param.minItems, 'greater')};`);
+                }
+                if (param.hasOwnProperty('maxItems')) {
+                    codes.push(`if (!rule.isMaxItems(${name}, ${param.maxItems})) return ${makeError(name, errorTypes.INVALID_ITEMS_COUNT, param.maxItems, 'less')};`);
+                }
+                // uniqueItems
+                if (param.hasOwnProperty('uniqueItems')) {
+                    codes.push(`if (!rule.isUniqueItems(${name})) return ${makeError(name, errorTypes.NOT_UNIQUE_ITEMS)};`);
+                }
+
+                let i = param.items.name;
+                codes.push(`for (let ${i} = 0; ${i} < ${name}.length; ${i}++) {`);
+                codes.push(++codes.indent);
+                this.define(codes, param.items, name, true);
+                codes.push(--codes.indent);
+                codes.push(`}`);
+            }
+
+            // end required
+            if (!isItem) {
+                codes.push(--codes.indent);
+                codes.push(`}`);
+            }
+        } else  {
             // default
             if (!param.hasOwnProperty('default')) {
                 switch (param.type) {
@@ -327,9 +333,14 @@ class Compile {
                 }
             }
 
-            if (!param.required && !isItem) {
+            // start required
+            if (!isItem) {
                 codes.push(`if (!${parent}.hasOwnProperty('${param.name}')) {`);
-                codes.push(`${TAB}${name} = ${JSON.stringify(param.default)};`);
+                if (param.required) {
+                    codes.push(`${TAB}return ${makeError(name, errorTypes.REQUIRED)};`);
+                } else {
+                    codes.push(`${TAB}${name} = ${JSON.stringify(param.default)};`);
+                }
                 codes.push(`} else {`);
                 codes.push(++codes.indent);
             }
@@ -412,7 +423,8 @@ class Compile {
                 }
             }
 
-            if (!param.required && !isItem) {
+            // end required
+            if (!isItem) {
                 codes.push(--codes.indent);
                 codes.push(`}`);
             }
@@ -442,7 +454,7 @@ class Compile {
             }
         });
 
-        var fn = `function ${name}(data, type, rule, format){\n${_codes.join('\n')}\n}`;
+        var fn = `function ${name}(data, type, rule, format, collect){\n${_codes.join('\n')}\n}`;
         debug(`${fn}\n\n`);
         return new Function(`return ${fn}`)();
     }
