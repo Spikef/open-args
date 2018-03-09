@@ -50,13 +50,18 @@ var error = {
         if (name === 'data') {
             beautify = 'data';
         } else {
-            var parts = name.replace('data', '').replace(/(^\[['"])|(['"]]$)/g, '').split(/['"]]\[['"]/);
+            var parts = name.replace('data', '').replace(/(^\[)|(]$)/g, '').split(/]\[/);
             parts.forEach((p, i) => {
-                if (/^[$_a-zA-Z][$_a-zA-Z0-9]*$/.test(p)) {
-                    if (i > 0) beautify += '.';
-                    beautify += p;
+                let m;
+                if (m = p.match(/^['"](.+)['"]$/)) {
+                    if (/^[$_a-zA-Z][$_a-zA-Z0-9]*$/.test(m[1])) {
+                        if (i > 0) beautify += '.';
+                        beautify += m[1];
+                    } else {
+                        beautify += `['${m[1]}']`;
+                    }
                 } else {
-                    beautify += `['${p}']`;
+                    beautify += `[" + ${p} + "]`;
                 }
             });
         }

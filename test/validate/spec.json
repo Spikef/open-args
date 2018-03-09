@@ -110,6 +110,9 @@
                     "type": "integer",
                     "minimum": 10000,
                     "maximum": 99999
+                },
+                "DoorNumber": {
+                    "type": "string"
                 }
             }
         }
@@ -395,6 +398,14 @@
                                                 "adventurous",
                                                 "aggressive"
                                             ]
+                                        },
+                                        "familyAddress": {
+                                            "type": "array",
+                                            "description": "The measured skill for hunting",
+                                            "minItems": 1,
+                                            "items": {
+                                                "$ref": "#/definitions/address"
+                                            }
                                         }
                                     },
                                     "required": [

@@ -1,8 +1,8 @@
-var Rav = require('../src');
+var Rav = require('../../src');
 var assert = require('assert');
 
-var method = 'patch';
-var path = '/pets/{PetName}';
+var method = 'get';
+var path = '/pet';
 var spec = require('./spec');
 var req = {
     header: {
@@ -30,6 +30,20 @@ var req = {
         },
         Tags: ['Dog'],
         huntingSkill: 'adventurous',
+        familyAddress: [
+            {
+                Street: 'HundredFlowersStreet',
+                City: 'OneNightRiver',
+                State: 'LS',
+                ZipCode: 10001
+            },
+            {
+                Street: 'HundredFlowersStreet',
+                City: 'OneNightRiver',
+                State: 'LS',
+                ZipCode: 10001
+            }
+        ],
     },
     params: {
         PetName: 'Dog'
@@ -39,13 +53,8 @@ var req = {
 var rav = new Rav(spec);
 var key = rav.hashKey(method, path);
 
-var cost = 0;
-var total = 10000;
-for (let i = 0; i < total; i++) {
-    let data = JSON.parse(JSON.stringify(req));
-    let start = Date.now();
-    rav.validate(key, data);
-    cost += Date.now() - start;
-}
-console.log(`average cost: ${(cost / total).toFixed(3)}ms`);
-
+describe('Validate [get] [/pet]', function () {
+    it('should validate true', function() {
+        assert.deepEqual(rav.validate(key, req), true);
+    });
+});

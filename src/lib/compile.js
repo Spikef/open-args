@@ -88,7 +88,9 @@ class Compile {
 
                 let name = util.getCheckName(operation.operationId, method, path);
                 let uKey = util.hashKey(method, path);
-                let codes = []; codes.indent = 1;
+                let codes = [];
+                codes.indent = 1;
+                codes.indexes = 'ijkopqrstuvwxyzabcdefghmnl'.split('');
                 if (util.isArray(parameters)) {
                     let param = {
                         name: 'data',
@@ -130,9 +132,10 @@ class Compile {
      * define codes
      * @param {Array} codes
      * @param {Number} codes.indent
+     * @param {Array} codes.indexes
      * @param {Object} param
-     * @param {String} param.name
-     * @param {String} param.type
+     * @param {String} [param.name]
+     * @param {String} [param.type]
      * @param {String} [param.format]
      * @param {Boolean} [param.required]
      * @param {String} [param.pattern]
@@ -155,9 +158,11 @@ class Compile {
      * @param {Number} [param.maxProperties]
      * @param {Array} [param.enum]
      * @param {String} [parent]
+     * @param {Boolean} [isItem=false]
      */
-    define(codes, param, parent = '') {
-        var name = parent ? `${parent}['${param.name}']` : param.name;
+    define(codes, param, parent = '', isItem) {
+        var key = isItem ? `${param.name}` : `'${param.name}'`;
+        var name = parent ? `${parent}[${key}]` : param.name;
         if (!util.isObject(param)) {
             console.log(`Unknown ${name}: `, param);
             return null;
@@ -219,7 +224,7 @@ class Compile {
         // fill type
         if (param.items) {
             param.type = 'array';
-            param.items.name = 'item';
+            param.items.name = codes.indexes.shift();
             param.items.required = false;
             if (param.hasOwnProperty('minItems')) {
                 param.required = true;
@@ -239,7 +244,7 @@ class Compile {
         codes.push(codes.indent);
 
         // required
-        if (param.required) {
+        if (param.required && !isItem) {
             if (parent) {
                 codes.push(`if (!${parent}.hasOwnProperty('${param.name}')) return ${makeError(name, errorTypes.REQUIRED)};`);
             } else {
@@ -250,7 +255,7 @@ class Compile {
         // type
         if (param.type === 'object') {
             // check type
-            if (parent) {
+            if (parent && !isItem) {
                 codes.push(`if (${parent}.hasOwnProperty('${param.name}')) {`);
                 codes.push(`${TAB}if (!type.isObject(${name})) return ${makeError(name, errorTypes.INVALID_TYPE, 'object')};`);
                 codes.push(`}`);
@@ -291,19 +296,18 @@ class Compile {
                 codes.push(`if (!rule.isUniqueItems(${name})) return ${makeError(name, errorTypes.NOT_UNIQUE_ITEMS)};`);
             }
 
-            // TODO: items.name
+            let i = param.items.name;
             codes.push(`if (${parent}.hasOwnProperty('${param.name}')) {`);
             codes.push(++codes.indent);
-            codes.push(`for (let i = 0; i < ${name}.length; i++) {`);
+            codes.push(`for (let ${i} = 0; ${i} < ${name}.length; ${i}++) {`);
             codes.push(++codes.indent);
-            codes.push(`let item = ${name}[i];`);
-            this.define(codes, param.items);
+            this.define(codes, param.items, name, true);
             codes.push(--codes.indent);
             codes.push(`}`);
             codes.push(--codes.indent);
             codes.push(`}`);
         } else if (param.type === 'file') {
-            // codes.push(`if (!type.isFile(${name})) return false;`);
+            // No checking for file
         } else {
             // default
             if (!param.hasOwnProperty('default')) {
@@ -323,7 +327,7 @@ class Compile {
                 }
             }
 
-            if (!param.required && parent) {
+            if (!param.required && !isItem) {
                 codes.push(`if (!${parent}.hasOwnProperty('${param.name}')) {`);
                 codes.push(`${TAB}${name} = ${JSON.stringify(param.default)};`);
                 codes.push(`} else {`);
@@ -408,7 +412,7 @@ class Compile {
                 }
             }
 
-            if (!param.required && parent) {
+            if (!param.required && !isItem) {
                 codes.push(--codes.indent);
                 codes.push(`}`);
             }

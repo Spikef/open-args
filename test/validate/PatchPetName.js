@@ -30,6 +30,20 @@ var req = {
         },
         Tags: ['Dog'],
         huntingSkill: 'adventurous',
+        familyAddress: [
+            {
+                Street: 'HundredFlowersStreet',
+                City: 'OneNightRiver',
+                State: 'LS',
+                ZipCode: 10001
+            },
+            {
+                Street: 'HundredFlowersStreet',
+                City: 'OneNightRiver',
+                State: 'LS',
+                ZipCode: 10001
+            }
+        ],
     },
     params: {
         PetName: 'Dog'
