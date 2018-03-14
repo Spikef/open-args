@@ -251,14 +251,14 @@ class Compile {
             if (!isItem) {
                 if (param.required) {
                     if (parent) {
-                        codes.push(`if (!${parent}.hasOwnProperty('${param.name}')) {`);
+                        codes.push(`if (${parent}['${param.name}'] === undefined) {`);
                     } else {
                         codes.push(`if (!${param.name}) {`);
                     }
                     codes.push(`${TAB}return ${makeError(name, errorTypes.REQUIRED)};`);
                     codes.push(`} else {`);
                 } else {
-                    codes.push(`if (${parent}.hasOwnProperty('${param.name}')) {`);
+                    codes.push(`if (${parent}['${param.name}'] !== undefined) {`);
                 }
                 codes.push(++codes.indent);
             }
@@ -335,7 +335,7 @@ class Compile {
 
             // start required
             if (!isItem) {
-                codes.push(`if (!${parent}.hasOwnProperty('${param.name}')) {`);
+                codes.push(`if (${parent}['${param.name}'] === undefined) {`);
                 if (param.required) {
                     codes.push(`${TAB}return ${makeError(name, errorTypes.REQUIRED)};`);
                 } else {

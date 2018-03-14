@@ -1,6 +1,6 @@
 {
   "name": "open-args",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Validate request arguments based on openAPI spec 2.0.",
   "main": "src/index.js",
   "scripts": {
