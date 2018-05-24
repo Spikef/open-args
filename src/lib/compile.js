@@ -171,7 +171,7 @@ class Compile {
 
         // schema
         if (param.schema) {
-            param = Object.assign(param, param.schema);
+            param = Object.assign(param.schema, param);
             delete param.schema;
         }
 
